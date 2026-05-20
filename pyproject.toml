@@ -1,0 +1,59 @@
+[project]
+name = "kio-orzeczenia-mcp"
+version = "0.1.0"
+description = "MCP server for Krajowa Izba Odwolawcza (KIO) rulings from orzeczenia.uzp.gov.pl"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "MateMatic", email = "kontakt@matematic.co" }
+]
+keywords = ["mcp", "kio", "uzp", "legal", "polish-law", "zamowienia-publiczne"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Legal Industry",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business",
+]
+dependencies = [
+    "fastmcp>=0.2.0",
+    "httpx>=0.27.0",
+    "selectolax>=0.3.21",
+    "pydantic>=2.5.0",
+    "diskcache>=5.6.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.4.0",
+]
+
+[project.scripts]
+kio-orzeczenia-mcp = "kio_orzeczenia_mcp.server:main"
+
+[project.urls]
+Homepage = "https://github.com/matematicsolutions/kio-orzeczenia-mcp"
+Repository = "https://github.com/matematicsolutions/kio-orzeczenia-mcp"
+Issues = "https://github.com/matematicsolutions/kio-orzeczenia-mcp/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kio_orzeczenia_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+markers = [
+    "smoke: online smoke tests (hit live UZP endpoints, rate-limited)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

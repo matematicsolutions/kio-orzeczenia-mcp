@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "kio-orzeczenia": {
+      "command": "python",
+      "args": ["-m", "kio_orzeczenia_mcp.server"],
+      "env": {
+        "KIO_MCP_RATE_LIMIT": "1.0",
+        "KIO_MCP_CACHE_DIR": "~/.matematic/cache/kio",
+        "KIO_MCP_AUDIT_DIR": "~/.matematic/audit"
+      }
+    }
+  }
+}
