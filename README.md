@@ -4,7 +4,7 @@ MCP server (Model Context Protocol) dla orzecznictwa **Krajowej Izby Odwolawczej
 
 Pozwala agentom Claude / Cursor / VS Code MCP konsumowac wyroki KIO z weryfikowalnymi cytatami (sygnatura + URL + data).
 
-**Status: POC v0.1.0** | Licencja: **Apache-2.0** | Maintainer: [MateMatic](https://matematic.co)
+**Status: POC v0.1.0** | Licencja: **Apache-2.0** | Maintainer: [MateMatic](https://matematicsolutions.com)
 
 > **Ostrzezenie wstepne.** Konektor v0.1.0 to wersja proof-of-concept. Pobiera dane z publicznej bazy orzeczen UZP przez HTML (bez oficjalnego REST API). Pelny disclaimer prawny - sekcja "Disclaimer prawny" ponizej. Przed wdrozeniem produkcyjnym wymagany jest wlasny smoke test i powiadomienie UZP.
 
