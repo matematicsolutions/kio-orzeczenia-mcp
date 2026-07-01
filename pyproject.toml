@@ -1,6 +1,6 @@
 [project]
 name = "kio-orzeczenia-mcp"
-version = "0.2.0"
+version = "0.2.1"
 description = "MCP server for Krajowa Izba Odwolawcza (KIO) rulings from orzeczenia.uzp.gov.pl"
 readme = "README.md"
 requires-python = ">=3.11"

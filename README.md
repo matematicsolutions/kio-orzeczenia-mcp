@@ -1,5 +1,7 @@
 # kio-orzeczenia-mcp
 
+<!-- mcp-name: io.github.matematicsolutions/kio-orzeczenia-mcp -->
+
 MCP server (Model Context Protocol) dla orzecznictwa **Krajowej Izby Odwolawczej (KIO)** przy Urzedzie Zamowien Publicznych - publiczna baza `orzeczenia.uzp.gov.pl`.
 
 Pozwala agentom Claude / Cursor / VS Code MCP konsumowac wyroki KIO z weryfikowalnymi cytatami (sygnatura + URL + data).
