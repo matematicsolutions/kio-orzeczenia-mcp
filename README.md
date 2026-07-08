@@ -222,9 +222,8 @@ See [`CONSTITUTION.md`](CONSTITUTION.md) - 4 governance principles (public data,
 
 Open-source connectors by MateMatic that complement the scope of this repository:
 
-- [`saos-orzecznictwo`](https://github.com/matematicsolutions/saos-orzecznictwo) - SAOS (Supreme Court, Supreme Administrative Court, common courts)
-- [`eu-sparql-search`](https://github.com/matematicsolutions/eu-sparql-search) - EU law via Cellar SPARQL
-- [`sejm-eli-mcp`](https://github.com/matematicsolutions/sejm-eli-mcp) - Journal of Laws, Monitor Polski, ministerial gazettes (Sejm ELI API)
-- [`uodo-orzeczenia-mcp`](https://github.com/matematicsolutions/uodo-orzeczenia-mcp) - case law of the President of UODO (GDPR)
+- [`mcp-saos`](https://github.com/matematicsolutions/mcp-saos) - SAOS (Supreme Court, Supreme Administrative Court, common courts)
+- [`mcp-eu-sparql`](https://github.com/matematicsolutions/mcp-eu-sparql) - EU law via Cellar SPARQL
+- [`mcp-isap`](https://github.com/matematicsolutions/mcp-isap) - Journal of Laws, Monitor Polski, ministerial gazettes (Sejm ELI API)
 
 External catalog of legal sources: [`worldwidelaw/legal-sources`](https://github.com/worldwidelaw/legal-sources) (bulk harvest scripts, MIT).
