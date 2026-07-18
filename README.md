@@ -61,6 +61,25 @@ Dodaj do `~/.claude.json` (lub `.mcp.json` w projekcie):
 }
 ```
 
+### Windows 11 ze Smart App Control
+
+Smart App Control blokuje niepodpisane pliki wykonywalne, a `uvx.exe`, `pip.exe`
+i generowany przy instalacji `kio-orzeczenia-mcp.exe` podpisane nie sa. `python.exe`
+z python.org jest podpisany przez Python Software Foundation, wiec uruchomienie
+przez modul omija blokade:
+
+```bash
+python -m pip install kio-orzeczenia-mcp
+python -m kio_orzeczenia_mcp
+```
+
+```json
+{ "mcpServers": { "kio-orzeczenia-mcp": { "command": "python", "args": ["-m", "kio_orzeczenia_mcp"] } } }
+```
+
+Nie wylaczaj Smart App Control, zeby to obejsc - wylaczenia nie da sie cofnac
+bez ponownej instalacji systemu.
+
 Restartuj Claude Code. Po starcie powinno byc widoczne 5 narzedzi.
 
 ## 5 narzedzi MCP
