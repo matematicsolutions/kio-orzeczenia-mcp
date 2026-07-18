@@ -1,61 +1,61 @@
 # Discovery - orzeczenia.uzp.gov.pl
 
-Data discovery: 2026-05-20
-Autor: MateMatic (Wieslaw Mazur)
+Discovery date: 2026-05-20
+Author: MateMatic (Wieslaw Mazur)
 Status: POC v0.1.0
 
-## Werdykt
+## Verdict
 
-**SCRAPE-BASED** - brak publicznego API, brak Swagger/OpenAPI, brak feed RSS.
+**SCRAPE-BASED** - no public API, no Swagger/OpenAPI, no RSS feed.
 
-Strona prowadzona przez **Urzad Zamowien Publicznych (UZP)** udostepnia orzecznictwo Krajowej Izby Odwolawczej (KIO) - organu administracyjnego (kwazi-sadowego) dzialajacego przy Urzedzie Zamowien Publicznych (czlonkowie KIO sa niezawisli przy orzekaniu - art. 471 PZP), rozpatrujacego odwolania w postepowaniach o udzielenie zamowienia publicznego. KIO nie jest sadem w rozumieniu rozdzialu VIII Konstytucji RP. Skarga na orzeczenie KIO przysluguje do Sadu Okregowego w Warszawie (tzw. Sad Zamowien Publicznych) na podstawie art. 579 i nast. ustawy z 11 wrzesnia 2019 r. - Prawo zamowien publicznych.
+The site, run by the **Urzad Zamowien Publicznych (UZP) (Public Procurement Office)**, makes available the case law of the Krajowa Izba Odwolawcza (KIO) (National Appeals Chamber) - an administrative (quasi-judicial) body operating at the Public Procurement Office (KIO members are independent when adjudicating - art. 471 PZP), which hears appeals in public procurement proceedings. KIO is not a court within the meaning of chapter VIII of the Constitution of the Republic of Poland. A complaint against a KIO ruling lies to the Regional Court in Warsaw (the so-called Public Procurement Court) under art. 579 et seq. of the Act of 11 September 2019 - Public Procurement Law.
 
-## Stack frontu
+## Frontend stack
 
-- ASP.NET MVC (routy `/Home/HtmlContent`, `/Home/PdfContent`)
-- Renderowanie PDF przez Qt 4.8.7 z dokumentu .docx zrodlowego
-- Bez SPA, bez JavaScript rendering - czyste HTML server-side -> mozemy uzyc selectolax (szybki HTML parser, lxml-based)
+- ASP.NET MVC (routes `/Home/HtmlContent`, `/Home/PdfContent`)
+- PDF rendering via Qt 4.8.7 from the source .docx document
+- No SPA, no JavaScript rendering - plain server-side HTML -> we can use selectolax (a fast HTML parser, lxml-based)
 
 ## URL patterns
 
-### Pojedyncze orzeczenie HTML
+### Single ruling HTML
 
 ```
 GET https://orzeczenia.uzp.gov.pl/Home/HtmlContent/{id}?Kind=KIO
 ```
 
-### Pojedyncze orzeczenie PDF
+### Single ruling PDF
 
 ```
 GET https://orzeczenia.uzp.gov.pl/Home/PdfContent/{id}?Kind=KIO
 ```
 
-### Wyszukiwarka / lista
+### Search / list
 
 ```
 GET https://orzeczenia.uzp.gov.pl/?phrase={fraza}&dateFrom=...&dateTo=...&signature=...
 ```
 
-**Krytyczne ograniczenie**: `{id}` to wewnetrzny ID bazy (np `15903`, `32111`), NIE powiazany z sygnatura `KIO 2924/21`. Mapowanie `sygnatura -> internal_id` wymaga scrape listingu wyszukiwarki.
+**Critical limitation**: `{id}` is the internal database ID (e.g. `15903`, `32111`), NOT linked to the signature `KIO 2924/21`. Mapping `signature -> internal_id` requires scraping the search listing.
 
-## Pola wyszukiwarki
+## Search fields
 
-| Pole | Param query | Typ |
+| Field | Query param | Type |
 |------|-------------|-----|
-| Haslo / slowa kluczowe | `phrase` | str |
-| Sygnatura | `signature` | str (format `KIO {nr}/{rok}`) |
-| Data od | `dateFrom` | YYYY-MM-DD |
-| Data do | `dateTo` | YYYY-MM-DD |
-| Indeks tematyczny | `subjectIndex` | str |
-| Przepisy PZP | (filtr po fraze) | brak server-side filtra |
-| Odmiana slow | `inflection` | bool toggle |
-| Wyszukiwanie w tresci | `contentSearch` | bool toggle |
+| Keyword / keywords | `phrase` | str |
+| Signature | `signature` | str (format `KIO {nr}/{rok}`) |
+| Date from | `dateFrom` | YYYY-MM-DD |
+| Date to | `dateTo` | YYYY-MM-DD |
+| Subject index | `subjectIndex` | str |
+| PZP provisions | (filter by phrase) | no server-side filter |
+| Word inflection | `inflection` | bool toggle |
+| Full-text search | `contentSearch` | bool toggle |
 
-**Brak server-side filtra po artykule PZP** - filtruje przez phrase + post-process w `parser.py`.
+**No server-side filter by PZP article** - filtered via phrase + post-process in `parser.py`.
 
-## Schema pojedynczego orzeczenia
+## Single ruling schema
 
-Z HTML `/Home/HtmlContent/{id}`:
+From HTML `/Home/HtmlContent/{id}`:
 
 ```python
 {
@@ -81,7 +81,7 @@ Z HTML `/Home/HtmlContent/{id}`:
 }
 ```
 
-## Schema listy wynikow
+## Result list schema
 
 ```python
 {
@@ -103,33 +103,33 @@ Z HTML `/Home/HtmlContent/{id}`:
 
 ## Limitations POC
 
-1. **Mapowanie sygnatura -> internal_id wymaga search** (extra request +1 req/s opoznienia)
-2. **Brak server-side filtru po artykule PZP** - filtr po fraze + post-process
-3. **PDF nie pobierany** - tylko link (decyzja produktowa: nie hostujemy PDF, linkujemy)
-4. **Brak deep parsera sentencji/uzasadnienia** - na POC zwracamy `content_text` (plain). Pelny parser z rozbiciem na czesci -> v1.0
-5. **Rate limit 1 req/s** -> wieksze sesje "po artykule" beda wolne (wymagaja paginacji)
+1. **Mapping signature -> internal_id requires a search** (extra request, +1 req/s of latency)
+2. **No server-side filter by PZP article** - filter by phrase + post-process
+3. **PDF not fetched** - only a link (product decision: we do not host PDFs, we link to them)
+4. **No deep sentence/reasoning parser** - in the POC we return `content_text` (plain). A full parser with section splitting -> v1.0
+5. **Rate limit 1 req/s** -> larger "by article" sessions will be slow (require pagination)
 
-## Komplementarnosc z innymi MCP MateMatic
+## Complementarity with other MateMatic MCPs
 
-- `saos-orzecznictwo` - SAOS (Sady powszechne, SN, NSA, TK) - **inny zakres** (nie KIO)
-- `eu-sparql-search` - prawo UE - **inny zakres**
-- `legal-data-hunter-pl` - bulk harvest catalog (jezeli pokrywa KIO -> dodajemy `kio-orzeczenia-mcp` jako "live query" warstwe na wierzch)
+- `saos-orzecznictwo` - SAOS (common courts, Supreme Court, Supreme Administrative Court, Constitutional Tribunal) - **different scope** (not KIO)
+- `eu-sparql-search` - EU law - **different scope**
+- `legal-data-hunter-pl` - bulk harvest catalog (if it covers KIO -> we add `kio-orzeczenia-mcp` as a "live query" layer on top)
 
-KIO to **specyficzny obszar prawa zamowien publicznych** - oddzielny konektor uzasadniony.
+KIO is a **specific area of public procurement law** - a separate connector is justified.
 
-## Otwarte pytania
+## Open questions
 
-- **Rate limit UZP** - czy 1 req/s jest odpowiedni? Brak oficjalnego limitu w dokumentacji; cap 2.0 req/s w Konstytucji to decyzja arbitralna POC. Walidacja: mail do UZP z pytaniem o limity.
-- **Mapowanie sygnatura -> internal_id** - obecnie 1 dodatkowy request search; czy UZP udostepnia indeks po sygnaturze (link permanentny)?
-- **Server-side filtr po artykule PZP** - czy wyszukiwarka UZP wspiera filtr po konkretnym artykule, czy wymaga frazy + post-process?
-- **Eksport masowy** - czy UZP udostepnia bulk download orzeczen (np. CSV/JSON dla dat zakresu)?
-- **Stabilnosc HTML** - selektory parsera sa best-effort; potrzebny snapshot test fixture po pierwszym smoke teste.
+- **UZP rate limit** - is 1 req/s appropriate? No official limit in the documentation; the 2.0 req/s cap in the Constitution is an arbitrary POC decision. Validation: an email to UZP asking about limits.
+- **Mapping signature -> internal_id** - currently 1 extra search request; does UZP provide an index by signature (permanent link)?
+- **Server-side filter by PZP article** - does the UZP search support a filter by a specific article, or does it require a phrase + post-process?
+- **Bulk export** - does UZP provide a bulk download of rulings (e.g. CSV/JSON for a date range)?
+- **HTML stability** - the parser selectors are best-effort; a snapshot test fixture is needed after the first smoke test.
 
-## TODO przed v1.0
+## TODO before v1.0
 
-- Snapshot testing z prawdziwymi fixtures HTML (anonimizowane jezeli trzeba)
-- Pelny parser sentencji + uzasadnienia (rozbicie na sekcje)
-- Slownik PZP (mapowanie artykul -> opis)
-- PDF bytes streaming jezeli klient zazyczy
-- Server-side article filter jezeli UZP doda do wyszukiwarki
-- Tagged release na github.com/matematicsolutions/kio-orzeczenia-mcp
+- Snapshot testing with real HTML fixtures (anonymized if needed)
+- Full sentence + reasoning parser (splitting into sections)
+- PZP dictionary (mapping article -> description)
+- PDF bytes streaming if a client requests it
+- Server-side article filter if UZP adds it to the search
+- Tagged release on github.com/matematicsolutions/kio-orzeczenia-mcp

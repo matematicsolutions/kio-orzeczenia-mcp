@@ -1,76 +1,76 @@
-# Konstytucja kio-orzeczenia-mcp
+# Constitution kio-orzeczenia-mcp
 
-Wersja: 0.1.0 (2026-05-20)
+Version: 0.1.0 (2026-05-20)
 Status: Draft POC
 
-Ten dokument definiuje 4 nieprzekraczalne zasady governance dla konektora MCP do orzecznictwa Krajowej Izby Odwolawczej (KIO) przy Urzedzie Zamowien Publicznych (UZP).
+This document defines the 4 non-negotiable governance principles for the MCP connector to the case law of the Krajowa Izba Odwolawcza (KIO) (National Appeals Chamber) at the Urzad Zamowien Publicznych (UZP) (Public Procurement Office).
 
 ---
 
-## Art. 1. Tylko publiczne dane
+## Art. 1. Public data only
 
-`kio-orzeczenia-mcp` konsumuje wylacznie publicznie dostepna baze orzeczen KIO udostepniana pod adresem `https://orzeczenia.uzp.gov.pl`. Sa to oficjalne, publikowane przez UZP orzeczenia Krajowej Izby Odwolawczej - orzecznictwo publicznie udostepnione na podstawie ustawy z 6 wrzesnia 2001 r. o dostepie do informacji publicznej (Dz.U. 2001 nr 112 poz. 1198 z pozn. zm.) oraz ustawy z 11 wrzesnia 2019 r. - Prawo zamowien publicznych.
+`kio-orzeczenia-mcp` consumes exclusively the publicly available KIO case law database made available at `https://orzeczenia.uzp.gov.pl`. These are official rulings of the Krajowa Izba Odwolawcza (National Appeals Chamber) published by UZP - case law made publicly available under the Act of 6 September 2001 on access to public information (Dz.U. 2001 no. 112 item 1198, as amended) and the Act of 11 September 2019 - Public Procurement Law.
 
-Orzeczenia KIO nie sa zrodlem prawa w rozumieniu art. 87 Konstytucji RP - sa orzeczeniami stosowania prawa, ktore powszechnie sluza praktyce kancelaryjnej jako material referencyjny.
+KIO rulings are not a source of law within the meaning of art. 87 of the Constitution of the Republic of Poland - they are rulings applying the law that widely serve law-firm practice as reference material.
 
-Konektor:
-- NIE omija zadnych zabezpieczen (brak CAPTCHA-solving, brak fake-CSRF)
-- NIE deanonimizuje stron postepowania ponad to, co publikuje UZP
-- NIE przechowuje pelnych tresci orzeczen w audit log (tylko sygnatury i metadane)
-- NIE modyfikuje danych zrodlowych
+The connector:
+- does NOT circumvent any protections (no CAPTCHA-solving, no fake-CSRF)
+- does NOT de-anonymize the parties to a proceeding beyond what UZP publishes
+- does NOT store the full text of rulings in the audit log (only signatures and metadata)
+- does NOT modify the source data
 
-Jezeli UZP zmieni regulamin lub Terms of Service i zabroni programatycznego dostepu - konektor zostaje wstrzymany. Decyzja Wieslawa Mazura jako Administratora.
+If UZP changes its terms or Terms of Service and prohibits programmatic access - the connector is suspended. Decision of Wieslaw Mazur as Administrator.
 
-## Art. 2. Rate limit 1 req/s obowiazkowy
+## Art. 2. Rate limit 1 req/s mandatory
 
-Defaultowy rate limit to **1 request na sekunde** dla calego serwera (globalny lock, nie per-tool). Wartosc dobrana konserwatywnie - bez znajomosci faktycznej pojemnosci infrastruktury UZP wybieramy nizszy prog niz dla wiekszych instytucjonalnych portali (np. api.sejm.gov.pl, ktore nie publikuja oficjalnego rate limitu, ale obsluguja zauwazalnie wieksze obciazenie).
+The default rate limit is **1 request per second** for the entire server (global lock, not per-tool). The value is chosen conservatively - without knowing the actual capacity of UZP infrastructure, we pick a lower threshold than for larger institutional portals (e.g. api.sejm.gov.pl, which does not publish an official rate limit but handles noticeably higher load).
 
-- Konfigurowalny przez env `KIO_MCP_RATE_LIMIT` (float, requests per second), ale nie wyzej niz **2.0** (decyzja arbitralna POC, do walidacji - patrz `DISCOVERY.md` sekcja "Otwarte pytania")
-- Jezeli `KIO_MCP_RATE_LIMIT > 2.0` -> hard error przy starcie
-- User-Agent obowiazkowy: `matematic-kio-mcp/{version} (+https://matematic.co; kontakt@matematic.co)`
-- Retry-After respektowane bezwzglednie
-- Backoff exponential przy 429/503
+- Configurable via the env `KIO_MCP_RATE_LIMIT` (float, requests per second), but no higher than **2.0** (arbitrary POC decision, to be validated - see `DISCOVERY.md` section "Open questions")
+- If `KIO_MCP_RATE_LIMIT > 2.0` -> hard error at startup
+- User-Agent mandatory: `matematic-kio-mcp/{version} (+https://matematic.co; kontakt@matematic.co)`
+- Retry-After respected unconditionally
+- Exponential backoff on 429/503
 
-Cel: nie obciazyc nadmiernie infrastruktury UZP i identyfikowac sie jasno (kontakt@matematic.co).
+Goal: not to overload UZP infrastructure and to identify ourselves clearly (kontakt@matematic.co).
 
-## Art. 3. Audit log obowiazkowy
+## Art. 3. Audit log mandatory
 
-Kazde wywolanie kazdego z 5 narzedzi zapisuje wpis w `~/.matematic/audit/kio-orzeczenia-mcp.jsonl`:
+Every call to each of the 5 tools writes an entry to `~/.matematic/audit/kio-orzeczenia-mcp.jsonl`:
 
 - `ts` (ISO 8601 UTC)
-- `tool` (nazwa narzedzia, np `kio_search`)
-- `params_hash` (SHA-256 z parametrow - bez surowych danych)
-- `result_summary` (np `{"items": 12, "total": 154}`)
-- `source_urls` (lista pelnych URL trafionych endpointow)
+- `tool` (tool name, e.g. `kio_search`)
+- `params_hash` (SHA-256 of the parameters - no raw data)
+- `result_summary` (e.g. `{"items": 12, "total": 154}`)
+- `source_urls` (list of full URLs of the endpoints hit)
 - `latency_ms`
 - `cache_hit` (bool)
 
-**Czego NIE logujemy:**
-- Pelnej tresci orzeczen (`reasoning`, `content_text`) - tylko sygnatury
-- Danych osobowych stron postepowania (mimo ze sa publiczne, audit log to nasz wewnetrzny artefakt)
+**What we do NOT log:**
+- The full text of rulings (`reasoning`, `content_text`) - only signatures
+- Personal data of the parties to a proceeding (even though it is public, the audit log is our internal artifact)
 
-Audit log sluzy rozliczalnosci operatora - kazde wywolanie konektora pozostawia slad pozwalajacy zweryfikowac, co i kiedy zostalo pobrane. Decyzja o powolaniu na konkretny przepis (np. art. 12 rozporzadzenia (UE) 2024/1689 - AI Act, w zakresie record-keeping dla systemow AI wysokiego ryzyka) nalezy do podmiotu wdrazajacego konektor i wymaga osobnej oceny prawnej dla tego podmiotu. Sam konektor nie jest systemem AI wysokiego ryzyka w rozumieniu AI Act.
+The audit log serves operator accountability - every call to the connector leaves a trace allowing verification of what was fetched and when. The decision to invoke a specific provision (e.g. art. 12 of Regulation (EU) 2024/1689 - AI Act, on record-keeping for high-risk AI systems) rests with the entity deploying the connector and requires a separate legal assessment for that entity. The connector itself is not a high-risk AI system within the meaning of the AI Act.
 
-## Art. 4. Cytowania obowiazkowe
+## Art. 4. Citations mandatory
 
-Kazdy `Orzeczenie` i `OrzeczenieSummary` zwracany przez konektor MUSI zawierac:
+Every `Orzeczenie` and `OrzeczenieSummary` returned by the connector MUST contain:
 
-- `signature` w formacie kanonicznym `"KIO {nr}/{rok}"` (np `"KIO 2924/21"`)
-- `human_readable_citation` w formacie `"Wyrok KIO z {YYYY-MM-DD}, sygn. KIO {nr}/{rok}"`
-- `source_url` - pelny URL do `orzeczenia.uzp.gov.pl` (mozliwy do otwarcia przez czlowieka)
+- `signature` in the canonical format `"KIO {nr}/{rok}"` (e.g. `"KIO 2924/21"`)
+- `human_readable_citation` in the format `"Wyrok KIO z {YYYY-MM-DD}, sygn. KIO {nr}/{rok}"`
+- `source_url` - the full URL to `orzeczenia.uzp.gov.pl` (openable by a human)
 - `retrieved_at` (ISO 8601 UTC)
 
-Cel: kazde orzeczenie zwracane przez konektor zawiera komplet metadanych pozwalajacych na bezposrednia weryfikacje w bazie UZP - sygnatura, link do oryginalu, data pobrania.
+Goal: every ruling returned by the connector contains a complete set of metadata allowing direct verification in the UZP database - signature, link to the original, retrieval date.
 
 ---
 
-## Zmiany konstytucji
+## Constitution changes
 
-Zmiany w tym dokumencie wymagaja:
-1. Wpisu w `DISCOVERY.md` z uzasadnieniem
-2. Bump SEMVER konstytucji (MAJOR przy zmianie Art. 1-4, MINOR przy doprecyzowaniu, PATCH przy literowce)
-3. Akceptacji Administratora (Wieslaw Mazur)
+Changes to this document require:
+1. An entry in `DISCOVERY.md` with justification
+2. A SEMVER bump of the constitution (MAJOR for changes to Art. 1-4, MINOR for clarifications, PATCH for typos)
+3. Acceptance by the Administrator (Wieslaw Mazur)
 
 ---
 
-Konstytucja oparta na patternie spec-driven (cherry-pick github/spec-kit, MIT).
+Constitution based on the spec-driven pattern (cherry-pick github/spec-kit, MIT).
