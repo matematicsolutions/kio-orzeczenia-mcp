@@ -118,3 +118,34 @@ def test_all_valid_codes_constructible():
         err = KIOError(code, "test message")
         assert err.code == code
         assert f"[{code}]" in str(err)
+
+
+def _declared_version(path: Path, pattern: str) -> str:
+    m = re.search(pattern, path.read_text(encoding="utf-8"))
+    assert m, f"Nie znalazlem wersji w {path.name} wzorcem {pattern!r}"
+    return m.group(1)
+
+
+def test_version_is_consistent_across_manifests():
+    """`__version__`, pyproject i server.json musza sie zgadzac.
+
+    Do v0.2.2 `__init__.py` zostal na 0.1.0, przez co UZP widzial w User-Agencie
+    wersje, ktorej nikt nie mogl powiazac z wydanym pakietem - a UA to nasz jedyny
+    kanal kontaktu z administratorem serwisu.
+    """
+    from kio_orzeczenia_mcp import USER_AGENT, __version__
+
+    root = Path(__file__).parent.parent
+    pyproject_version = _declared_version(
+        root / "pyproject.toml", r'(?m)^version\s*=\s*"([^"]+)"'
+    )
+    server_json = (root / "server.json").read_text(encoding="utf-8")
+    server_versions = set(re.findall(r'"version":\s*"([^"]+)"', server_json))
+
+    assert __version__ == pyproject_version, (
+        f"__init__.py ma {__version__}, pyproject.toml ma {pyproject_version}"
+    )
+    assert server_versions == {__version__}, (
+        f"server.json ma {sorted(server_versions)}, oczekiwano {__version__}"
+    )
+    assert __version__ in USER_AGENT

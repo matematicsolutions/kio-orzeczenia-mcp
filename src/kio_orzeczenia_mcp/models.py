@@ -36,11 +36,25 @@ class SearchQuery(BaseModel):
         default=None,
         description="artykul PZP np '226' lub '224 ust. 1 pkt 1' (post-process filter)",
     )
-    subject_index: Optional[str] = Field(default=None, description="indeks tematyczny")
+    subject_index: Optional[str] = Field(default=None, description="indeks tematyczny (filtr server-side)")
     inflection: bool = Field(default=True, description="odmiana slow (default True)")
     content_search: bool = Field(default=True, description="szukaj tez w pelnej tresci")
+    sort: Optional[str] = Field(
+        default=None,
+        description="rank (trafnosc, default UZP) | date_asc | date_desc",
+    )
     page: int = Field(default=1, ge=1)
     size: int = Field(default=20, ge=1, le=100)
+
+    @field_validator("sort")
+    @classmethod
+    def _validate_sort(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        valid = {"rank", "date_asc", "date_desc"}
+        if v not in valid:
+            raise ValueError(f"Invalid sort {v!r}. Valid: {sorted(valid)}")
+        return v
 
     @field_validator("signature")
     @classmethod
@@ -53,11 +67,17 @@ class SearchQuery(BaseModel):
 
 
 class OrzeczenieSummary(BaseModel):
-    """Skrocony rekord orzeczenia (z listy wynikow)."""
+    """Skrocony rekord orzeczenia (z listy wynikow).
+
+    `issue_date` bywa None - UZP nie ma daty wydania dla czesci starszych rekordow
+    (pole "Data wydania: -"). Nie podstawiamy wartosci zastepczej, bo cytat z
+    falszywa data jest gorszy niz cytat bez daty.
+    """
 
     signature: str = Field(..., description="np 'KIO 2924/21'")
     internal_id: int = Field(..., description="wewnetrzny ID bazy UZP")
-    issue_date: date
+    issue_date: Optional[date] = Field(default=None, description="data wydania albo None gdy UZP jej nie podaje")
+    doc_type: Optional[str] = Field(default=None, description="wyrok / postanowienie / uchwala")
     snippet: Optional[str] = Field(default=None, description="fragment z kontekstem frazy")
     pzp_articles: list[str] = Field(default_factory=list)
     subject_index: list[str] = Field(default_factory=list)
@@ -67,7 +87,11 @@ class OrzeczenieSummary(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def human_readable_citation(self) -> str:
-        return _hrc(self.signature, self.issue_date.isoformat())
+        return _hrc(
+            self.signature,
+            self.issue_date.isoformat() if self.issue_date else None,
+            self.doc_type,
+        )
 
 
 class Orzeczenie(BaseModel):
@@ -75,7 +99,9 @@ class Orzeczenie(BaseModel):
 
     signature: str
     internal_id: int
-    issue_date: date
+    issue_date: Optional[date] = Field(default=None, description="data wydania albo None gdy UZP jej nie podaje")
+    doc_type: Optional[str] = Field(default=None, description="wyrok / postanowienie / uchwala")
+    outcome: Optional[str] = Field(default=None, description="sposob rozstrzygniecia wg metryki UZP (np 'uwzglednione')")
     chamber_composition: list[Person] = Field(default_factory=list)
     parties: list[Person] = Field(default_factory=list)
     sentence: Optional[str] = Field(default=None, description="sentencja (uwzglednienie/oddalenie + nakazy)")
@@ -83,14 +109,19 @@ class Orzeczenie(BaseModel):
     pzp_articles: list[str] = Field(default_factory=list)
     subject_index: list[str] = Field(default_factory=list)
     content_text: str = Field(default="", description="pelny plain text orzeczenia")
-    source_url_html: str
+    source_url_html: str = Field(..., description="metryka /Home/Details/{id} - URL do cytowania")
+    source_url_content: Optional[str] = Field(default=None, description="pelna tresc /Home/ContentHtml/{id}")
     source_url_pdf: str
     retrieved_at: str = Field(default_factory=_utcnow_iso)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def human_readable_citation(self) -> str:
-        return _hrc(self.signature, self.issue_date.isoformat())
+        return _hrc(
+            self.signature,
+            self.issue_date.isoformat() if self.issue_date else None,
+            self.doc_type,
+        )
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -117,10 +148,13 @@ class PdfUrlResponse(BaseModel):
     signature: str
     internal_id: int
     issue_date: Optional[date] = None
+    doc_type: Optional[str] = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def human_readable_citation(self) -> str:
-        if self.issue_date is None:
-            return f"Wyrok KIO, sygn. {self.signature}"
-        return _hrc(self.signature, self.issue_date.isoformat())
+        return _hrc(
+            self.signature,
+            self.issue_date.isoformat() if self.issue_date else None,
+            self.doc_type,
+        )

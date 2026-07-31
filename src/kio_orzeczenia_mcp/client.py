@@ -1,14 +1,40 @@
-"""httpx async client z rate limit + retry/backoff dla orzeczenia.uzp.gov.pl."""
+"""httpx async client z rate limit + retry/backoff dla orzeczenia.uzp.gov.pl.
+
+Wyszukiwarka UZP jest AJAX-owa: strona `/` i `/Home/Search` to tylko shell z formularzem,
+a wyniki dociagane sa POST-em na `/Home/GetResults` (form-urlencoded). Nazwy pol formularza
+sa krotkie i case-sensitive - patrz `_search_form_data`.
+"""
 
 from __future__ import annotations
 
 import asyncio
+from datetime import date
 from typing import Any, Optional
 
 import httpx
 
-from . import BASE_URL, USER_AGENT
+from . import (
+    BASE_URL,
+    CONTENT_PATH,
+    DETAILS_PATH,
+    PDF_PATH,
+    SEARCH_PATH,
+    USER_AGENT,
+)
 from .rate_limit import RateLimiter, from_env
+
+
+# Najstarsze orzeczenia w bazie UZP - uzywane gdy podano tylko `date_to`
+# (UZP wymaga PELNEGO zakresu "od - do" w polu Dt).
+_MIN_DATE = date(2004, 1, 1)
+
+# Dopuszczalne wartosci pola Srt (sortowanie) w formularzu UZP.
+VALID_SORTS = frozenset({"rank", "date_asc", "date_desc"})
+
+
+def _fmt_dt(d: date) -> str:
+    """UZP oczekuje dat w formacie DD-MM-YYYY (nie ISO)."""
+    return d.strftime("%d-%m-%Y")
 
 
 class KioClient:
@@ -16,7 +42,7 @@ class KioClient:
 
     Uzywaj jako async context manager:
         async with KioClient() as c:
-            html = await c.get_html_content(15903)
+            html, url = await c.get_content_html(15903)
     """
 
     def __init__(
@@ -50,6 +76,7 @@ class KioClient:
         method: str,
         url: str,
         params: Optional[dict] = None,
+        data: Optional[dict] = None,
         max_retries: int = 3,
     ) -> httpx.Response:
         """Wykonuje request z rate limit i backoff na 429/503."""
@@ -57,7 +84,7 @@ class KioClient:
         for attempt in range(max_retries):
             await self._rate_limiter.acquire()
             try:
-                resp = await self._client.request(method, url, params=params)
+                resp = await self._client.request(method, url, params=params, data=data)
             except httpx.RequestError as e:
                 last_exc = e
                 await asyncio.sleep(2 ** attempt)
@@ -83,54 +110,139 @@ class KioClient:
             raise last_exc
         raise httpx.HTTPError(f"Failed after {max_retries} retries: {method} {url}")
 
-    async def get_html_content(self, internal_id: int) -> tuple[str, str]:
-        """GET /Home/HtmlContent/{id}?Kind=KIO.
+    # ---------- pojedynczy dokument ----------
+
+    async def get_content_html(self, internal_id: int) -> tuple[str, str]:
+        """GET /Home/ContentHtml/{id}?Kind=KIO - pelna tresc orzeczenia.
+
+        UWAGA: do v0.2.2 klient uderzal w `/Home/HtmlContent/{id}` (odwrocona nazwa),
+        ktore zwraca 404. Poprawna sciezka to `/Home/ContentHtml/{id}`.
 
         Returns:
             (html_text, full_url)
         """
-        url = f"/Home/HtmlContent/{internal_id}"
-        params = {"Kind": "KIO"}
+        url = f"{CONTENT_PATH}/{internal_id}"
+        params = {"Kind": "KIO", "flection": "0"}
         resp = await self._request("GET", url, params=params)
-        full_url = f"{BASE_URL}{url}?Kind=KIO"
-        return resp.text, full_url
+        return resp.text, f"{BASE_URL}{url}?Kind=KIO&flection=0"
+
+    async def get_details(self, internal_id: int) -> tuple[str, str]:
+        """GET /Home/Details/{id} - metryka orzeczenia (data, sklad, strony, przepisy PZP).
+
+        To jest kanoniczny URL "do klikniecia przez czlowieka" - cytujemy go w
+        `source_url_html`.
+
+        Returns:
+            (html_text, full_url)
+        """
+        url = f"{DETAILS_PATH}/{internal_id}"
+        resp = await self._request("GET", url)
+        return resp.text, f"{BASE_URL}{url}"
+
+    # ---------- wyszukiwarka ----------
+
+    @staticmethod
+    def _search_form_data(
+        phrase: Optional[str] = None,
+        signature: Optional[str] = None,
+        date_from: Optional[date] = None,
+        date_to: Optional[date] = None,
+        subject_index: Optional[str] = None,
+        pzp_article: Optional[str] = None,
+        inflection: bool = True,
+        content_search: bool = True,
+        page: int = 1,
+        sort: Optional[str] = None,
+        kind: str = "KIO",
+    ) -> dict[str, str]:
+        """Buduje payload formularza UZP.
+
+        Mapowanie nazw pol (stan 2026-07-31):
+            Phrase  - fraza                     Sign  - sygnatura
+            Fle     - odmiana slow (checkbox)   SCnt  - szukaj w tresci (checkbox)
+            Dt      - zakres dat "DD-MM-YYYY - DD-MM-YYYY"
+            ThIdx   - indeks tematyczny         Art   - przepis PZP (filtr SERVER-SIDE)
+            Kind    - KIO/SO/SA/SN              Pg    - numer strony (10 wynikow/strona)
+            Srt     - rank | date_asc | date_desc
+            CountStats - True zeby serwer policzyl total
+
+        Checkboxy Fle/SCnt: przegladarka NIE wysyla ich gdy odznaczone, wiec przy
+        False pomijamy klucz (Fle=0 daje ten sam wynik, ale trzymamy sie zachowania
+        przegladarki).
+        """
+        data: dict[str, str] = {
+            "Kind": kind,
+            "Pg": str(page),
+            "CountStats": "True",
+        }
+        if phrase:
+            data["Phrase"] = phrase
+        if signature:
+            data["Sign"] = signature
+        if subject_index:
+            data["ThIdx"] = subject_index
+        if pzp_article:
+            data["Art"] = pzp_article
+        if date_from or date_to:
+            lo = date_from or _MIN_DATE
+            hi = date_to or date.today()
+            data["Dt"] = f"{_fmt_dt(lo)} - {_fmt_dt(hi)}"
+        if inflection:
+            data["Fle"] = "1"
+        if content_search:
+            data["SCnt"] = "1"
+        if sort:
+            if sort not in VALID_SORTS:
+                raise ValueError(f"Invalid sort {sort!r}. Valid: {sorted(VALID_SORTS)}")
+            data["Srt"] = sort
+        return data
 
     async def search(
         self,
         phrase: Optional[str] = None,
         signature: Optional[str] = None,
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
+        date_from: Optional[date] = None,
+        date_to: Optional[date] = None,
         subject_index: Optional[str] = None,
+        pzp_article: Optional[str] = None,
         inflection: bool = True,
         content_search: bool = True,
         page: int = 1,
+        sort: Optional[str] = None,
     ) -> tuple[str, str]:
-        """GET / (wyszukiwarka).
+        """POST /Home/GetResults - fragment HTML z lista wynikow (10 na strone).
 
         Returns:
-            (html_text, full_url)
+            (html_fragment, human_url) - `human_url` to GET-owy odpowiednik zapytania,
+            ktory czlowiek moze otworzyc w przegladarce (/Home/Search?...).
         """
-        params: dict[str, Any] = {"page": page}
-        if phrase:
-            params["phrase"] = phrase
-        if signature:
-            params["signature"] = signature
-        if date_from:
-            params["dateFrom"] = date_from
-        if date_to:
-            params["dateTo"] = date_to
-        if subject_index:
-            params["subjectIndex"] = subject_index
-        params["inflection"] = "true" if inflection else "false"
-        params["contentSearch"] = "true" if content_search else "false"
+        data = self._search_form_data(
+            phrase=phrase,
+            signature=signature,
+            date_from=date_from,
+            date_to=date_to,
+            subject_index=subject_index,
+            pzp_article=pzp_article,
+            inflection=inflection,
+            content_search=content_search,
+            page=page,
+            sort=sort,
+        )
+        resp = await self._request("POST", SEARCH_PATH, data=data)
+        return resp.text, self.human_search_url(data)
 
-        resp = await self._request("GET", "/", params=params)
-        # Buduj URL do logow
-        qs = "&".join(f"{k}={v}" for k, v in params.items())
-        full_url = f"{BASE_URL}/?{qs}"
-        return resp.text, full_url
+    @staticmethod
+    def human_search_url(form_data: dict[str, str]) -> str:
+        """URL wyszukiwarki do otwarcia przez czlowieka (audit log / cytowanie)."""
+        qs = httpx.QueryParams(form_data)
+        return f"{BASE_URL}/Home/Search?{qs}"
+
+    # ---------- URL-e bez pobierania ----------
 
     def pdf_url(self, internal_id: int) -> str:
         """Buduje URL do PDF (NIE pobiera bytes)."""
-        return f"{BASE_URL}/Home/PdfContent/{internal_id}?Kind=KIO"
+        return f"{BASE_URL}{PDF_PATH}/{internal_id}?Kind=KIO"
+
+    def details_url(self, internal_id: int) -> str:
+        """Buduje URL metryki orzeczenia (strona dla czlowieka)."""
+        return f"{BASE_URL}{DETAILS_PATH}/{internal_id}"
