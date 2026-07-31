@@ -75,18 +75,42 @@ def format_signature_full(nr: int, year: int) -> str:
     return f"KIO {nr}/{year}"
 
 
-def human_readable_citation(signature: str, issue_date: str) -> str:
+# Rodzaj dokumentu wg metryki UZP -> forma mianownikowa w cytacie.
+_DOC_TYPE_LABELS = {
+    "wyrok": "Wyrok",
+    "postanowienie": "Postanowienie",
+    "uchwala": "Uchwala",
+    "uchwała": "Uchwała",
+}
+
+
+def human_readable_citation(
+    signature: str,
+    issue_date: str | None,
+    doc_type: str | None = None,
+) -> str:
     """Format cytatu dla czlowieka.
 
     Args:
         signature: kanoniczna sygnatura "KIO 2924/21"
-        issue_date: ISO YYYY-MM-DD
+        issue_date: ISO YYYY-MM-DD albo None (UZP nie ma daty dla czesci starszych
+            rekordow - NIE zmyslamy jej)
+        doc_type: "wyrok" / "postanowienie" / "uchwala" z metryki UZP.
+            None -> "Wyrok" (dominujacy rodzaj, zachowanie wsteczne).
 
     Returns:
-        "Wyrok KIO z {YYYY-MM-DD}, sygn. {signature}"
+        "{Rodzaj} KIO z {YYYY-MM-DD}, sygn. {signature}" albo - bez daty -
+        "{Rodzaj} KIO, sygn. {signature}"
 
     Examples:
         >>> human_readable_citation("KIO 2924/21", "2021-10-28")
         'Wyrok KIO z 2021-10-28, sygn. KIO 2924/21'
+        >>> human_readable_citation("KIO 22/17", None)
+        'Wyrok KIO, sygn. KIO 22/17'
+        >>> human_readable_citation("KIO 100/24", "2024-03-01", "postanowienie")
+        'Postanowienie KIO z 2024-03-01, sygn. KIO 100/24'
     """
-    return f"Wyrok KIO z {issue_date}, sygn. {signature}"
+    label = _DOC_TYPE_LABELS.get((doc_type or "").strip().lower(), "Wyrok")
+    if not issue_date:
+        return f"{label} KIO, sygn. {signature}"
+    return f"{label} KIO z {issue_date}, sygn. {signature}"

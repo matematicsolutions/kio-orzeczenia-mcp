@@ -115,10 +115,12 @@ Fetches the full text of a single ruling.
 ```jsonc
 // Arguments:
 "KIO 2924/21"   // string -> first search by signature to resolve internal_id (+1 req)
-15903           // int -> directly GET /Home/HtmlContent/15903
+15903           // int -> directly GET /Home/Details/15903 + /Home/ContentHtml/15903
 ```
 
-Returns the full `Orzeczenie` with `content_text`, `sentence`, `reasoning` (if the parser can extract them), `pzp_articles`, `chamber_composition`, `parties`.
+Returns the full `Orzeczenie` with `content_text`, `sentence`, `reasoning` (if the parser can extract them), `pzp_articles`, `subject_index`, `doc_type`, `outcome`, `chamber_composition`, `parties`.
+
+`issue_date` may be `null` - UZP has no issue date for some older records. We do not substitute a placeholder date.
 
 ### 3. `kio_recent(days: int = 30, limit: int = 20) -> list[OrzeczenieSummary]`
 
@@ -131,12 +133,12 @@ The most recent rulings from the last N days, sorted by date descending.
 
 ### 4. `kio_by_pzp_article(article: str, limit: int = 20) -> list[OrzeczenieSummary]`
 
-Rulings citing a specific PZP article. Filtered by phrase + post-process (no server-side article filter).
+Rulings citing a specific PZP article. Uses the UZP server-side `Art` filter, which matches the provisions dictionary and is format-sensitive (`"art. 226 ust. 1 pkt 5"` hits, plain `"226"` does not). On an empty result the tool falls back to a full-text phrase search.
 
 ```jsonc
 // Arguments:
-{ "article": "226", "limit": 20 }
-{ "article": "224 ust. 1 pkt 1", "limit": 50 }
+{ "article": "art. 226 ust. 1 pkt 5", "limit": 20 }
+{ "article": "224 ust. 1", "limit": 50 }   // "art. " prefix added automatically
 ```
 
 ### 5. `kio_get_pdf_url(signature_or_id: str | int) -> dict`
@@ -196,10 +198,12 @@ Result: the full `Orzeczenie` with `parties`, `sentence`, `reasoning`.
 ## Limitations (POC)
 
 1. **Mapping signature -> internal_id requires a search** - if you query by signature, we make +1 req
-2. **No server-side filter by PZP article** - filtering done via phrase search + post-process (may miss some hits)
+2. **Server-side PZP article filter is dictionary-based** - `Art` matches entries of the UZP provisions dictionary, so the format matters (`"art. 226 ust. 1 pkt 5"`, not `"226"`); on a miss we fall back to a phrase search, which is broader and needs verification
 3. **PDF not fetched** - only a link to the UZP page (product decision)
 4. **The sentence/reasoning parser is shallow** - in the POC we return `content_text` as plain text. Splitting into sections -> v1.0
 5. **Rate limit 1 req/s** - large lists may be slow. A 7-day cache for rulings (immutable) mitigates this.
+6. **UZP serves a fixed 10 results per page** - `size > 10` is stitched client-side from consecutive pages, i.e. +1 request per extra page
+7. **Scraping, not an API** - UZP rebuilt the search engine in July 2026 and every endpoint moved (see `DISCOVERY.md`). Run `pytest -m smoke` after any UZP-side change; `tests/test_parser_regression.py` guards the parser offline.
 
 ## Cache
 
