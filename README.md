@@ -85,7 +85,7 @@ python -m kio_orzeczenia_mcp
 Do not turn Smart App Control off to work around this - it cannot be re-enabled
 without reinstalling Windows.
 
-## 5 MCP tools
+## 6 MCP tools
 
 ### 1. `kio_search(query: SearchQuery) -> SearchResult`
 
@@ -156,6 +156,12 @@ Returns the URL to the PDF (rendered by UZP from .docx via Qt 4.8.7). **Does not
 ```
 
 ---
+
+### 6. `kio_coverage() -> Coverage`
+
+Declares what this connector covers, where it comes from, and what it does NOT cover.
+Every gap carries a stable id and a fallback. Call it before telling a user a ruling
+"does not exist" - the absence may be a gap in this connector, not in KIO case law.
 
 ## 3 usage examples (natural language)
 
