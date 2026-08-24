@@ -632,7 +632,17 @@ async def kio_coverage() -> Coverage:
     Returns:
         ``Coverage`` with families, an as-of note, and a non-empty list of known gaps.
     """
-    return build_coverage()
+    t0 = time.monotonic()
+    coverage = build_coverage()
+    audit.log_event(
+        tool="kio_coverage",
+        params={},
+        result_summary={"families": len(coverage.families), "gaps": len(coverage.known_gaps)},
+        source_urls=[],
+        latency_ms=(time.monotonic() - t0) * 1000,
+        cache_hit=False,
+    )
+    return coverage
 
 
 # ---------- entry point ----------
