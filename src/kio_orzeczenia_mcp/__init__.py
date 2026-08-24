@@ -1,6 +1,6 @@
 """kio-orzeczenia-mcp - MCP server for KIO (Krajowa Izba Odwolawcza) rulings from orzeczenia.uzp.gov.pl."""
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __author__ = "MateMatic"
 __license__ = "Apache-2.0"
 

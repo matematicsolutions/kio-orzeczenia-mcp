@@ -58,6 +58,7 @@ Ten serwer MCP udostepnia orzecznictwo Krajowej Izby Odwolawczej (KIO) przy Urze
 
 ## Twarde ograniczenia
 
+- **Do not answer past the edge of this corpus** - when a search comes back empty, or the question touches material this connector does not carry, call `kio_coverage` and relay what it says is missing. Absence here is not absence in the law.
 - **Sygnatura w formacie `KIO {nr}/{rok}`** - np. `KIO 2924/21` lub `KIO 5072/25`. Spacje wewnatrz tolerowane. Inne formaty (np. `KIO/UZP/...`) odrzucane jako `invalid_signature`.
 - **Rate limit 1 req/s** - hard cap 2.0. NIE wysylaj burstow zapytan. UZP nie ma oficjalnego API, scrapujemy ostroznie z respektem dla zasobow sadu.
 - **Bez modyfikacji tresci orzeczenia** - tekst urzedowy integralny. Zwracamy verbatim z UZP.
