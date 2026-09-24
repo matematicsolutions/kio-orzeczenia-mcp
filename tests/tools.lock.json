@@ -1,0 +1,447 @@
+{
+  "package_version": "0.4.4",
+  "tools": {
+    "kio_by_pzp_article": {
+      "descriptor": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true,
+          "readOnlyHint": true
+        },
+        "description": "Orzeczenia KIO cytujace konkretny artykul PZP.\n\nUzywa filtra server-side UZP (`Art`), ktory dziala na slowniku przepisow i jest\nwrazliwy na format: `\"art. 226 ust. 1 pkt 5\"` daje trafienia, samo `\"226\"` nie.\nGdy filtr zwroci 0 wynikow, tool schodzi do wyszukiwania frazowego po tresci -\nwtedy trafienia sa szersze i wymagaja weryfikacji przez `kio_get_orzeczenie`.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "article": {
+              "description": "np \"art. 226 ust. 1 pkt 5\" albo \"224 ust. 1\"",
+              "type": "string"
+            },
+            "limit": {
+              "default": 20,
+              "description": "limit wynikow (default 20, max 100)",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "article"
+          ],
+          "type": "object"
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        },
+        "name": "kio_by_pzp_article",
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "type": "object",
+          "x-fastmcp-wrap-result": true
+        }
+      },
+      "sha256": "cb562e2924664adf4e7aaa458460345654074a99ba60f409461e621b4f5ba9f5"
+    },
+    "kio_coverage": {
+      "descriptor": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true,
+          "readOnlyHint": true
+        },
+        "description": "Declare what this connector covers, how it is sourced, and what it does NOT cover.\n\nCall this before telling a user that the law \"does not contain\" something, and whenever\na search comes back empty: the absence may be a gap in this connector rather than in the\nlaw. Every gap carries a fallback saying where to look instead.\n\nReturns:\n    ``Coverage`` with families, an as-of note, and a non-empty list of known gaps.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        },
+        "name": "kio_coverage",
+        "outputSchema": {
+          "additionalProperties": true,
+          "description": "What this connector covers, how it is sourced, and what it does not cover.",
+          "properties": {
+            "as_of_note": {
+              "description": "States what the dates mean, and what they do not promise.",
+              "type": "string"
+            },
+            "families": {
+              "items": {
+                "additionalProperties": true,
+                "description": "One data family this connector exposes.",
+                "properties": {
+                  "captured_at": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null,
+                    "description": "Date this family was last captured (ISO). None when queried live."
+                  },
+                  "live": {
+                    "default": true,
+                    "description": "True when queried live instead of from a snapshot.",
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "description": "Data family, e.g. 'Federal legislation'.",
+                    "type": "string"
+                  },
+                  "source": {
+                    "description": "Official source the data comes from.",
+                    "type": "string"
+                  },
+                  "tool": {
+                    "description": "Tool or tools that reach this family.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "tool",
+                  "source"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "known_gaps": {
+              "description": "Never empty. An empty list would mean 'not checked', not 'no gaps'.",
+              "items": {
+                "additionalProperties": true,
+                "description": "A known, named hole in this connector's coverage - plus the way around it.",
+                "properties": {
+                  "fallback": {
+                    "description": "Where to go instead.",
+                    "type": "string"
+                  },
+                  "family": {
+                    "description": "Which family the gap belongs to.",
+                    "type": "string"
+                  },
+                  "id": {
+                    "description": "Stable gap identifier.",
+                    "type": "string"
+                  },
+                  "missing": {
+                    "description": "What is NOT available through this connector.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "family",
+                  "missing",
+                  "fallback"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "status": {
+              "default": "ok",
+              "enum": [
+                "ok",
+                "degraded",
+                "failed"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "as_of_note"
+          ],
+          "type": "object"
+        }
+      },
+      "sha256": "84b48be709d69572d967828fd3b8aedcf53939e71262be737da5aed876207716"
+    },
+    "kio_get_orzeczenie": {
+      "descriptor": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true,
+          "readOnlyHint": true
+        },
+        "description": "Pobiera pelne orzeczenie KIO.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "signature_or_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "description": "\"KIO 2924/21\" (string) albo 15903 (internal int ID).\n             Sygnatura wymaga +1 req aby ustalic internal_id przez search."
+            }
+          },
+          "required": [
+            "signature_or_id"
+          ],
+          "type": "object"
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        },
+        "name": "kio_get_orzeczenie",
+        "outputSchema": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "sha256": "9bf0ab9211ed43af579519c0dc4ebd479211cd6597e3855acd38de33ed4dab8a"
+    },
+    "kio_get_pdf_url": {
+      "descriptor": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true,
+          "readOnlyHint": true
+        },
+        "description": "Zwraca URL do PDF orzeczenia (NIE pobiera bytes).",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "signature_or_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "description": "\"KIO 2924/21\" lub 15903"
+            }
+          },
+          "required": [
+            "signature_or_id"
+          ],
+          "type": "object"
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        },
+        "name": "kio_get_pdf_url",
+        "outputSchema": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "sha256": "d8be1887647a5f8ffdb320ae2525bd71fbffa74df1dc6c208bdabff88eb4a011"
+    },
+    "kio_recent": {
+      "descriptor": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true,
+          "readOnlyHint": true
+        },
+        "description": "Najnowsze orzeczenia KIO z ostatnich N dni.\n\nUWAGA: UZP publikuje orzeczenia z opoznieniem - dla `days=30` lista bywa krotka\nlub pusta, i to jest poprawny wynik, a nie blad parsera. Przy pustym wyniku\nzaproponuj uzytkownikowi szerszy zakres (`days=90`).",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "days": {
+              "default": 30,
+              "description": "ile dni wstecz (default 30, max 3650)",
+              "type": "integer"
+            },
+            "limit": {
+              "default": 20,
+              "description": "ile orzeczen zwrocic (default 20, max 100)",
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        },
+        "name": "kio_recent",
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "type": "object",
+          "x-fastmcp-wrap-result": true
+        }
+      },
+      "sha256": "c1c4192abd9e8b39bec5c18f9e5102cd735461e305bc27735de3083fb55815e5"
+    },
+    "kio_search": {
+      "descriptor": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true,
+          "readOnlyHint": true
+        },
+        "description": "Wyszukuje orzeczenia KIO w bazie orzeczenia.uzp.gov.pl.\n\nWszystkie parametry opcjonalne. `pzp_article` i `subject_index` to filtry\nserver-side UZP (od 2026-07 wyszukiwarka je udostepnia).",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "content_search": {
+              "default": true,
+              "description": "szukaj w pelnej tresci (default True)",
+              "type": "boolean"
+            },
+            "date_from": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "YYYY-MM-DD"
+            },
+            "date_to": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "YYYY-MM-DD"
+            },
+            "inflection": {
+              "default": true,
+              "description": "odmiana slow (default True)",
+              "type": "boolean"
+            },
+            "page": {
+              "default": 1,
+              "description": "strona wynikow (default 1)",
+              "type": "integer"
+            },
+            "phrase": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "slowa kluczowe (np \"razaco niska cena\")"
+            },
+            "pzp_article": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "artykul PZP, format slownika UZP (np \"art. 226 ust. 1 pkt 5\")"
+            },
+            "signature": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "sygnatura \"KIO {nr}/{rok}\""
+            },
+            "size": {
+              "default": 20,
+              "description": "rozmiar strony (default 20, max 100)",
+              "type": "integer"
+            },
+            "sort": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "\"rank\" (trafnosc) | \"date_asc\" | \"date_desc\""
+            },
+            "subject_index": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "indeks tematyczny (np \"razaco niska cena\")"
+            }
+          },
+          "type": "object"
+        },
+        "meta": {
+          "fastmcp": {
+            "tags": []
+          }
+        },
+        "name": "kio_search",
+        "outputSchema": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "sha256": "5d159c29a0e5c8f8c7c1c6fdc65695fa8101e3fac882f7da20dcf8eb259fdc2c"
+    }
+  },
+  "toolset_sha256": "379d19eed02763769285b80023b8125bbfcb59954e0ac131bbbbffc07a2a1e10"
+}
