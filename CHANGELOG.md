@@ -2,6 +2,11 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), SemVer.
 
+## [0.4.4] - 2026-09-24
+
+### Fixed
+- A failed audit-log write is now counted and reported on stderr instead of being silently dropped; it still never blocks the user.
+
 ## [0.3.0] - 2026-07-31
 
 **Naprawa krytyczna.** W v0.2.2 kazde `kio_search` zwracalo `total=0` i pusta liste, a
