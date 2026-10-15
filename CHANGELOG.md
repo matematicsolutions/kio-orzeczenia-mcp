@@ -2,6 +2,14 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), SemVer.
 
+## [0.4.6] - 2026-10-15
+
+### Changed
+- The HTML parser now uses selectolax's lexbor backend instead of Modest, which selectolax 1.0
+  removed. This replaces the temporary `<1` pin from 0.4.5: the dependency is now
+  `selectolax>=0.4.9,<2`. Parser output on every test fixture is identical to the Modest output
+  (0 differences on selectolax 0.4.9, 0.4.13 and 1.0.0). No tool descriptor changed.
+
 ## [0.4.5] - 2026-10-15
 
 ### Fixed
