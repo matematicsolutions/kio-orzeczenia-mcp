@@ -2,6 +2,14 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), SemVer.
 
+## [0.4.5] - 2026-10-15
+
+### Fixed
+- A fresh install from PyPI no longer fails at import. selectolax 1.0 (2026-10-13) removed the
+  Modest backend (`selectolax.parser`) that the parser uses, and the dependency had no upper bound.
+  It is now pinned to `selectolax>=0.3.21,<1` until the parser moves to the lexbor backend.
+  No tool descriptor changed (the descriptor lock differs only in `package_version`).
+
 ## [0.4.4] - 2026-09-24
 
 ### Fixed
