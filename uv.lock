@@ -612,7 +612,7 @@ wheels = [
 
 [[package]]
 name = "kio-orzeczenia-mcp"
-version = "0.3.1"
+version = "0.4.4"
 source = { editable = "." }
 dependencies = [
     { name = "diskcache" },
@@ -638,7 +638,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.0" },
-    { name = "selectolax", specifier = ">=0.3.21" },
+    { name = "selectolax", specifier = ">=0.3.21,<1" },
 ]
 provides-extras = ["dev"]
 
