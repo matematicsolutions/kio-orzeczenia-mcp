@@ -61,7 +61,7 @@ Add to `~/.claude.json` (or `.mcp.json` in the project):
 }
 ```
 
-Restart Claude Code. After startup, 5 tools should be visible.
+Restart Claude Code. After startup, 6 tools should be visible.
 
 ### Windows 11 with Smart App Control
 
