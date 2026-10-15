@@ -21,7 +21,8 @@ import unicodedata
 from datetime import date
 from typing import Optional
 
-from selectolax.parser import HTMLParser, Node
+# Backend lexbor: selectolax 1.0 usunal Modest (`selectolax.parser`).
+from selectolax.lexbor import LexborHTMLParser as HTMLParser, LexborNode as Node
 
 from . import BASE_URL, CONTENT_PATH, DETAILS_PATH, PDF_PATH
 from .models import Orzeczenie, OrzeczenieSummary, Person
